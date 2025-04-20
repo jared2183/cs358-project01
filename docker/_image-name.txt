@@ -1,1 +1,1 @@
-cs358-base-image2
+cs358-base-image

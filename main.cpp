@@ -68,24 +68,22 @@ int main(int argc, char *argv[])
 	// calculations.
 	//
   auto start = chrono::high_resolution_clock::now();
+	// saves number of rows and columns to a variable
+	int num_rows = wm.num_rows();
+	int num_cols = wm.num_cols();
 
-	for (int r = 0; r < wm.num_rows(); r++) {
-		for (int c = 0; c < wm.num_cols(); c++) {
+	#pragma omp parallel for schedule(dynamic) num_threads(_numThreads)
+	// flattens the array so that dynamic scheduling is done element-by-element instead of row-by-row
+	for (int i = 0; i < num_rows * num_cols; i++) {
+		// does work in cell [r][c] where r = i / num_rows (integer division) and c = i % num_rows (modulo)
+		wm.do_work(i / num_rows, i % num_rows);
 
-			//
-			// this solves the work in cell [r][c]:
-			//
-			wm.do_work(r, c);
+		// show some output every 100 cells so we see progress:
+		cells++;
 
-			//
-			// show some output every 100 cells so we see progress:
-			//
-			cells++;
-
-			if (cells % 100 == 0) {
-				cout << ".";
-				cout.flush();
-			}
+		if (cells % 100 == 0) {
+			cout << ".";
+			cout.flush();
 		}
 	}
   
