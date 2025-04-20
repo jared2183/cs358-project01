@@ -24,7 +24,7 @@
 #include <vector>
 #include <queue>
 #include <map>
-#include <unordered_map>
+#include <unordered_set>
 #include <chrono>
 #include <random>
 #include <sys/sysinfo.h>
@@ -71,46 +71,33 @@ int main(int argc, char *argv[])
 
   auto start = chrono::high_resolution_clock::now();
 
-
-	//
-	// TODO: solve all the vertices in the graph. This code just
-	// solves the start vertex.
-	//
-	#pragma omp parallel
 	queue<int> q;
 	q.push(wg.start_vertex());
 
-	unordered_map<int, bool> seen;
-	seen[wg.start_vertex()] = true;
-
-	// queue<int> work_queue;
+	unordered_set<int> seen;
+	seen.insert(wg.start_vertex());
 	
 	// bfs
 	while (!q.empty()) {
-		// pops from queue
-		int vtx = q.front();
+		// pops current vertex from queue
+		int cur = q.front();
 		q.pop();
 
-		// visit
-		// work_queue.push(vtx);
-
 		// add neighbors to queue if not seen
-		for (int nbor : wg.neighbors(vtx)) {
-			if (seen.find(nbor) == seen.end()) {
-				seen[nbor] = true;  // Mark as seen immediately after pushing
+		for (int nbor : wg.neighbors(cur)) {
+			if (seen.count(nbor) == 0) {
+				seen.insert(nbor);  // initially marks neighbors as seen to avoid duplicate insertions
 				q.push(nbor);
 			}
 		}
 	}
 
-	
-	vector<int> work_queue;
-	for (const auto& pair : seen) {
-		work_queue.push_back(pair.first);
-	}
+	// turns seen into vector so it can be parallelized
+	vector<int> vertices(seen.begin(), seen.end());
 
+	// parallelizes vector of vertices with dynamic scheduling
 	#pragma omp parallel for schedule(dynamic) num_threads(_numThreads)
-	for (int vtx: work_queue) {
+	for (int vtx: vertices) {
 		wg.do_work(vtx);
 	}
 

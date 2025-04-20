@@ -2,6 +2,10 @@
   "files.associations": {
     "vector": "cpp",
     "queue": "cpp",
-    "unordered_map": "cpp"
+    "unordered_map": "cpp",
+    "deque": "cpp",
+    "map": "cpp",
+    "string": "cpp",
+    "unordered_set": "cpp"
   }
 }
