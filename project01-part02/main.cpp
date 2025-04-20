@@ -76,11 +76,14 @@ int main(int argc, char *argv[])
 	// TODO: solve all the vertices in the graph. This code just
 	// solves the start vertex.
 	//
+	#pragma omp parallel
 	queue<int> q;
 	q.push(wg.start_vertex());
 
 	unordered_map<int, bool> seen;
 	seen[wg.start_vertex()] = true;
+
+	// queue<int> work_queue;
 	
 	// bfs
 	while (!q.empty()) {
@@ -89,7 +92,7 @@ int main(int argc, char *argv[])
 		q.pop();
 
 		// visit
-		wg.do_work(vtx);
+		// work_queue.push(vtx);
 
 		// add neighbors to queue if not seen
 		for (int nbor : wg.neighbors(vtx)) {
@@ -98,6 +101,17 @@ int main(int argc, char *argv[])
 				q.push(nbor);
 			}
 		}
+	}
+
+	
+	vector<int> work_queue;
+	for (const auto& pair : seen) {
+		work_queue.push_back(pair.first);
+	}
+
+	#pragma omp parallel for schedule(dynamic) num_threads(_numThreads)
+	for (int vtx: work_queue) {
+		wg.do_work(vtx);
 	}
 
 	auto stop = chrono::high_resolution_clock::now();
