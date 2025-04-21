@@ -79,26 +79,20 @@ int main(int argc, char *argv[])
 	
 	// bfs
 	while (!q.empty()) {
-		// pops current vertex from queue
-		int cur = q.front();
+		// pops current node from queue
+		int current_node = q.front();
 		q.pop();
 
+		// visit
+		vector<int> neighbors = wg.do_work(current_node);
+
 		// add neighbors to queue if not seen
-		for (int nbor : wg.neighbors(cur)) {
-			if (seen.count(nbor) == 0) {
-				seen.insert(nbor);  // initially marks neighbors as seen to avoid duplicate insertions
-				q.push(nbor);
+		for (int neighbor : neighbors) {
+			if (seen.count(neighbor) == 0) {
+				seen.insert(neighbor);  // initially marks neighbors as seen to avoid duplicate insertions
+				q.push(neighbor);
 			}
 		}
-	}
-
-	// turns seen into vector so it can be parallelized
-	vector<int> vertices(seen.begin(), seen.end());
-
-	// parallelizes vector of vertices with dynamic scheduling
-	#pragma omp parallel for schedule(dynamic) num_threads(_numThreads)
-	for (int vtx: vertices) {
-		wg.do_work(vtx);
 	}
 
 	auto stop = chrono::high_resolution_clock::now();

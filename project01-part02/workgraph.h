@@ -40,9 +40,10 @@ class WorkGraph {
       // start vertex:
       int start_vertex();
 
-      // neighbors of a vertex (no duplicates since no multi-edges): 
-      std::vector<int> neighbors(int vertex);
-
-      // do_work: solve the work in the given vertex
-      bool do_work(int vertex);
+      //
+      // do_work: solve the work in the given vertex, 
+      // which as part of the computation generates
+      // and returns the vertex's neighbors.
+      //
+      std::vector<int> do_work(int vertex);
 };
