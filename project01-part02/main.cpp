@@ -25,6 +25,7 @@
 #include <queue>
 #include <map>
 #include <unordered_set>
+// #include <tbb/parallel_for.h>
 #include <chrono>
 #include <random>
 #include <sys/sysinfo.h>
@@ -44,7 +45,6 @@ static int _numThreads = 1;  // default to sequential execution
 // Function prototypes:
 //
 static void ProcessCmdLineArgs(int argc, char* argv[]);
-
 
 //
 // main:
@@ -76,23 +76,54 @@ int main(int argc, char *argv[])
 
 	unordered_set<int> seen;
 	seen.insert(wg.start_vertex());
-	
+
 	// bfs
-	while (!q.empty()) {
-		// pops current node from queue
-		int current_node = q.front();
-		q.pop();
+	#pragma omp parallel num_threads(_numThreads)
+	{
+		#pragma omp single
+		{
+			while (true) {
+				int current_node;
+				bool q_empty = true;
+				
+				// threads "wait in line" for other threads to execute critical section one at a time, which here is accessing the queue
+				#pragma omp critical(queue_access)
+				{
+					// pops current node from queue if not empty
+					if (!q.empty()) {
+						q_empty = false;
+						current_node = q.front();
+						q.pop();
+					}
+				}
 
-		// visit
-		vector<int> neighbors = wg.do_work(current_node);
-
-		// add neighbors to queue if not seen
-		for (int neighbor : neighbors) {
-			if (seen.count(neighbor) == 0) {
-				seen.insert(neighbor);  // initially marks neighbors as seen to avoid duplicate insertions
-				q.push(neighbor);
+				if (!q_empty) {
+					// creates a task to process the node and adds it to the shared "thread todo list"
+					#pragma omp task
+					{
+						vector<int> neighbors = wg.do_work(current_node);
+	
+						#pragma omp critical(queue_access)	// protects queue and seen access
+						{
+							// add neighbors to queue if not seen
+							for (int neighbor : neighbors) {
+								if (seen.count(neighbor) == 0) {
+									seen.insert(neighbor);  // initially marks neighbors as seen to avoid duplicate insertions
+									q.push(neighbor);
+								}
+							}
+						}
+					}
+				}
+				else {
+					// if queue is empty, waits for all tasks to finish which might add to queue
+					#pragma omp taskwait
+					if (q.empty()) {
+						break;	// exits loop once all vertices are solved
+					}
+				}
 			}
-		}
+		}	// implicit barrier from omp single
 	}
 
 	auto stop = chrono::high_resolution_clock::now();
@@ -109,7 +140,6 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-
 
 //
 // processCmdLineArgs:
